@@ -31,10 +31,10 @@ window.APP_CONFIG = {
 
   // 3) AI 分析中转网址（Cloudflare Worker 部署后的网址）
   //    留空字符串 "" 则自动隐藏 AI 分析功能
-  aiProxyUrl: "https://aianalysis-swzd5i7tuq-as.a.run.app",
+  aiProxyUrl: "https://your-worker-name.your-account.workers.dev",
 
   // 4) 顾问收单的 WhatsApp 号码（国际码开头，不要 + 和空格）
-  salesWhatsapp: "60127194133"
+  salesWhatsapp: "60125676118"
 };
 </script>
 <style>
@@ -207,6 +207,59 @@ window.APP_CONFIG = {
   .quote-card{background:rgba(255,238,205,.06); border:1px solid var(--gold-line); border-left:3px solid var(--gold); border-radius:2px; padding:16px 20px; margin-bottom:12px;}
   .quote-card .qname{font-size:12.5px; font-weight:700; color:var(--gold); margin-bottom:6px;}
   .quote-card p{font-size:clamp(14.5px,1.15vw,18px); color:var(--ink); margin:0; font-style:italic;}
+
+  /* ---- Zoom 线上诊断 ---- */
+  #liveBtn{display:none; appearance:none; border:1px solid var(--gold); background:linear-gradient(135deg,#FFE39B,#E9BB55);
+    color:#6E0A0E; font-family:var(--sans); font-size:clamp(12.5px,1vw,15px); font-weight:700; padding:8px 14px;
+    border-radius:20px; cursor:pointer;}
+  .live-code-box{background:rgba(255,238,205,.08); border:1px solid var(--gold-line); border-radius:4px;
+    padding:clamp(20px,2vw,28px); margin-bottom:22px;}
+  .live-code{font-family:var(--serif); font-size:clamp(32px,4vw,52px); font-weight:700; color:var(--gold);
+    letter-spacing:.14em; margin:6px 0 4px;}
+  .live-link{font-size:clamp(12.5px,1vw,15px); color:var(--ink-soft); word-break:break-all; margin:10px 0 14px;
+    background:rgba(40,2,5,.4); padding:10px 12px; border-radius:3px;}
+  .live-status{display:flex; align-items:center; gap:10px; font-size:clamp(14px,1.1vw,17px); margin-bottom:20px;}
+  .live-dot{width:9px; height:9px; border-radius:50%; background:var(--ink-soft); flex:none;}
+  .live-dot.on{background:var(--good); box-shadow:0 0 0 4px rgba(159,227,184,.2); animation:pulse 1.8s ease-in-out infinite;}
+  @keyframes pulse{50%{box-shadow:0 0 0 8px rgba(159,227,184,0);}}
+  @media (prefers-reduced-motion: reduce){ .live-dot.on{animation:none;} }
+  .live-prog-track{height:8px; background:rgba(50,2,6,.55); border-radius:4px; margin:8px 0 22px;}
+  .live-prog-fill{height:100%; background:linear-gradient(90deg,#FFE39B,#D9A63F); border-radius:4px; transition:width .4s ease;}
+  .live-dim{border:1px solid var(--gold-line); border-radius:3px; padding:clamp(16px,1.5vw,22px); margin-bottom:12px;
+    background:rgba(255,238,205,.05); opacity:.4; transition:opacity .3s ease;}
+  .live-dim.done{opacity:1;}
+  .live-dim .ld-top{display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:6px;}
+  .live-dim .ld-name{font-weight:700; font-size:clamp(14.5px,1.15vw,18px);}
+  .live-dim .ld-pct{font-family:var(--serif); font-size:clamp(16px,1.4vw,21px); color:var(--gold);}
+  .live-dim .ld-say{font-size:clamp(13.5px,1.1vw,17px); color:var(--ink); font-family:var(--serif); line-height:1.55;
+    border-left:2px solid var(--gold); padding-left:12px; margin-top:10px;}
+  .live-dim .ld-say b{color:var(--gold); font-family:var(--sans); font-size:11.5px; display:block; margin-bottom:4px; font-weight:700;}
+  .live-fin{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:20px;}
+  .live-fin .lf{background:rgba(255,238,205,.06); border:1px solid var(--gold-line); border-radius:3px; padding:14px;}
+  .live-fin .lf .v{font-family:var(--serif); font-size:clamp(18px,1.8vw,26px); font-weight:700; color:var(--gold);}
+  .live-fin .lf .l{font-size:clamp(11px,.9vw,13.5px); color:var(--ink-soft); margin-top:2px;}
+  .live-waiting{text-align:center; padding:40px 20px; color:var(--ink-soft); font-size:clamp(14px,1.1vw,17px);}
+
+  .follow-hint{display:none; position:fixed; left:0; right:0; bottom:0; z-index:60;
+    background:linear-gradient(180deg, rgba(110,10,14,0) 0%, rgba(110,10,14,.96) 45%);
+    color:var(--gold); text-align:center; font-size:clamp(12.5px,1vw,15px); font-weight:600;
+    padding:26px 16px calc(14px + env(safe-area-inset-bottom,0px));}
+  body.following .follow-hint{display:block;}
+  body.following .btn-row{display:none !important;}
+  body.following #startBtn,
+  body.following #financeForm button[type=submit],
+  body.following #readinessForm button[type=submit],
+  body.following #contactForm button[type=submit]{display:none !important;}
+  body.following .wrap{padding-bottom:96px;}
+
+  .done-box{text-align:center; padding:clamp(30px,5vh,60px) clamp(20px,2vw,32px);
+    background:rgba(255,238,205,.07); border:1px solid var(--gold-line); border-radius:4px;}
+  .done-box .tick{font-size:clamp(44px,5vw,64px); margin-bottom:10px;}
+  .done-box h2{font-family:var(--serif); font-size:clamp(23px,2.3vw,32px); margin:0 0 12px; color:#FFF0CC;}
+  .done-box p{font-size:clamp(15px,1.15vw,19px); color:var(--ink-soft); margin:0 auto 26px; max-width:40ch; line-height:1.7;}
+  .done-score{font-family:var(--serif); font-size:clamp(56px,6vw,90px); font-weight:700; color:var(--gold);
+    text-shadow:0 2px 16px rgba(0,0,0,.35); line-height:1.1;}
+  .done-score-label{font-size:clamp(12.5px,1vw,15px); color:var(--ink-soft); letter-spacing:.04em; margin-bottom:24px;}
 
   .login-gate{position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center; padding:24px;
     background:
@@ -411,6 +464,7 @@ window.APP_CONFIG = {
   </div>
   <div class="top-actions">
     <span class="consultant-tag" id="consultantTag"></span>
+    <button id="liveBtn">线上诊断</button>
     <button id="rosterBtn">客户记录库</button>
   </div>
 </header>
@@ -708,6 +762,64 @@ window.APP_CONFIG = {
       <span id="repDate"></span>
     </footer>
   </section>
+
+  <!-- SCREEN: CLIENT WAIT (consultant is explaining) -->
+  <section class="screen" data-screen="wait">
+    <div class="done-box">
+      <div class="tick">💬</div>
+      <h2>顾问正在讲解</h2>
+      <p>请看 Zoom 画面听顾问分析这一部分，等一下会继续下一组问题。</p>
+    </div>
+  </section>
+
+  <!-- SCREEN: CLIENT DONE (client mode only) -->
+  <section class="screen" data-screen="done">
+    <div class="done-box">
+      <div class="tick">✅</div>
+      <h2>诊断完成，谢谢你的配合</h2>
+      <div class="done-score" id="doneScore">--</div>
+      <div class="done-score-label">系统化综合评分 / 100</div>
+      <p>完整的分析报告、你的强弱项和改善建议，顾问会在 Zoom 上为你逐项讲解。请切换回会议画面。</p>
+    </div>
+  </section>
+</div>
+
+<div class="follow-hint" id="followHint">跟着顾问的节奏作答，顾问会带你到下一页</div>
+
+<div class="overlay" id="liveOverlay">
+  <div class="overlay-head">
+    <h2>线上诊断（Zoom）</h2>
+    <button class="ghost" id="liveCloseBtn">关闭</button>
+  </div>
+  <div class="overlay-body">
+    <div class="live-code-box">
+      <div style="font-size:13px;color:var(--ink-soft);">把这个链接发给客户（Zoom 聊天室贴上即可）</div>
+      <div class="live-code" id="liveCode">------</div>
+      <div class="live-link" id="liveLink"></div>
+      <button class="primary" id="copyLinkBtn">复制链接</button>
+      <button class="btn-secondary" id="previewBtn">用客户视角打开（新分页）</button>
+      <button class="btn-secondary" id="newSessionBtn">换一位客户（重新生成）</button>
+    </div>
+
+    <div class="live-status">
+      <span class="live-dot" id="liveDot"></span>
+      <span id="liveStatusText">等待客户打开链接…</span>
+    </div>
+    <div class="live-prog-track"><div class="live-prog-fill" id="liveProgFill" style="width:0%"></div></div>
+
+    <div id="liveFinWrap" style="display:none;">
+      <div class="section-title" style="font-size:clamp(16px,1.4vw,20px);">客户填的财务数据</div>
+      <p class="section-sub">客户端看不到这些换算结果</p>
+      <div class="live-fin" id="liveFin"></div>
+    </div>
+
+    <div class="section-title" style="font-size:clamp(16px,1.4vw,20px);">现场话术提示</div>
+    <p class="section-sub">客户每答完一个维度，这里就会亮起对应的切入话术</p>
+    <div id="liveDims"></div>
+
+    <button class="primary" id="liveReportBtn" style="margin-top:20px; display:none;">客户已完成 · 打开完整报告</button>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:12px;">报告只会在你这边显示。要给客户看时，再用 Zoom 分享画面。</p>
+  </div>
 </div>
 
 <div class="overlay" id="rosterOverlay">
@@ -893,9 +1005,21 @@ window.APP_CONFIG = {
   var finance = {revenue:0, cogs:0, labor:0, rent:0, other:0, industry:'fnb', multi:false, bestMargin:0, worstMargin:0, cashMonths:0, trend:''};
   var customerQuotes = {};
   var currentInsightKey = null;
-  var screens = ['intro','finance','readiness','insight_finance'];
-  QUAL_DIMENSIONS.forEach(function(d){ screens.push('q_'+d.key); screens.push('insight_'+d.key); });
-  screens = screens.concat(['contact','report']);
+  // ---- Zoom 线上诊断：客户端 / 顾问端 ----
+  var SESSION_CODE = (new URLSearchParams(location.search).get('join') || '').trim().toUpperCase();
+  var CLIENT_MODE = !!SESSION_CODE;
+
+  var screens;
+  if(CLIENT_MODE){
+    // 客户端：只答题，不看话术、不看报告
+    screens = ['intro','finance','readiness'];
+    QUAL_DIMENSIONS.forEach(function(d){ screens.push('q_'+d.key); });
+    screens = screens.concat(['contact','done']);
+  } else {
+    screens = ['intro','finance','readiness','insight_finance'];
+    QUAL_DIMENSIONS.forEach(function(d){ screens.push('q_'+d.key); screens.push('insight_'+d.key); });
+    screens = screens.concat(['contact','report']);
+  }
   var current = 0;
   var savedDocId = null;
 
@@ -928,7 +1052,81 @@ window.APP_CONFIG = {
     loginGate.classList.add('hidden');
     db = firebase.firestore();
     document.getElementById('rosterBtn').style.display = 'inline-block';
+    document.getElementById('liveBtn').style.display = 'inline-block';
     subscribeRoster();
+  }
+
+  // 客户端：匿名登入，直接进入问卷，不需要密码
+  async function startClientMode(){
+    loginGate.classList.add('hidden');
+    document.getElementById('rosterBtn').style.display = 'none';
+    document.getElementById('liveBtn').style.display = 'none';
+    var aiC = document.getElementById('aiCard'); if(aiC) aiC.style.display = 'none';
+
+    // 客户端文案：不提报告、不提解锁
+    var lede = document.querySelector('[data-screen="intro"] p.lede');
+    if(lede) lede.textContent = '接下来会问你几个关于生意现况的问题，大约 8 分钟。请照实回答，顾问会在 Zoom 上根据你的答案为你分析。';
+    var ch2 = document.querySelector('[data-screen="contact"] .dim-head h2');
+    if(ch2) ch2.textContent = '最后，留下你的基本资料';
+    var ctag = document.querySelector('[data-screen="contact"] .dim-head .tag');
+    if(ctag) ctag.textContent = '最后一步';
+    var clede = document.querySelector('[data-screen="contact"] p.lede');
+    if(clede) clede.textContent = '方便顾问在会议上称呼你，以及后续跟进时联络你。';
+    var cbtn = document.querySelector('#contactForm button.primary');
+    if(cbtn) cbtn.textContent = '提交，完成诊断';
+    var sbtn = document.getElementById('startBtn');
+    if(sbtn) sbtn.textContent = '开始作答';
+    var note = document.querySelector('[data-screen="intro"] p[style*="font-size:12px"]');
+    if(note) note.textContent = '你填写的资料只会提供给本次会议的顾问，不会公开。';
+    try{
+      if(fbAuth && !fbAuth.currentUser) await fbAuth.signInAnonymously();
+      db = firebase.firestore();
+      await db.collection('sessions').doc(SESSION_CODE).set({
+        clientJoinedAt: Date.now(), step: 0, status: 'joined'
+      }, {merge:true});
+
+      // 跟随顾问的页面
+      ctlUnsub = ctlRef().onSnapshot(function(snap){
+        var d = snap.exists ? snap.data() : null;
+        if(!d || !d.screen) return;
+        following = true;
+        document.body.classList.add('following');
+        showScreenByName(d.screen);
+        window.scrollTo({top:0, behavior:'auto'});
+      }, function(){});
+
+      // 接收顾问那边的输入（顾问帮客户填时，客户画面同步）
+      dataUnsub = dataRef().onSnapshot(function(snap){
+        var d = snap.exists ? snap.data() : null;
+        if(!d || d.writer === 'client') return;
+        applyRemote(d);
+      }, function(){});
+    }catch(e){
+      // 连不上也让客户能答题，最后再试着上传
+    }
+
+    // 客户输入时即时同步（顾问那边看得到）
+    ['fRevenue','fCogs','fLabor','fRent','fOther'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(!el) return;
+      el.addEventListener('input', function(){
+        var k = {fRevenue:'revenue',fCogs:'cogs',fLabor:'labor',fRent:'rent',fOther:'other'}[id];
+        finance[k] = parseFloat(el.value) || 0;
+        pushSession();
+      });
+    });
+    var indEl = document.getElementById('fIndustry');
+    if(indEl) indEl.addEventListener('change', function(){ finance.industry = indEl.value; applyIndustry(indEl.value); pushSession(); });
+    var cashEl = document.getElementById('rCash');
+    if(cashEl) cashEl.addEventListener('input', function(){ finance.cashMonths = parseFloat(cashEl.value) || 0; pushSession(); });
+    var trendEl = document.getElementById('rTrend');
+    if(trendEl) trendEl.addEventListener('change', function(){ finance.trend = trendEl.value; pushSession(); });
+    [['cName','name'],['cCompany','company'],['cPhone','phone']].forEach(function(pair){
+      var el = document.getElementById(pair[0]);
+      if(el) el.addEventListener('input', function(){ contact[pair[1]] = el.value.trim(); pushSession(); });
+    });
+    var outEl = document.getElementById('cOutlets');
+    if(outEl) outEl.addEventListener('change', function(){ contact.outlets = outEl.value; pushSession(); });
   }
 
   async function doLogin(){
@@ -949,9 +1147,11 @@ window.APP_CONFIG = {
   loginBtn.addEventListener('click', doLogin);
   loginPass.addEventListener('keydown', function(e){ if(e.key === 'Enter') doLogin(); });
 
-  if(fbAuth){
+  if(CLIENT_MODE){
+    startClientMode();
+  } else if(fbAuth){
     fbAuth.onAuthStateChanged(function(u){
-      if(u && localStorage.getItem('m9_consultant_name')) unlockApp();
+      if(u && !u.isAnonymous && localStorage.getItem('m9_consultant_name')) unlockApp();
     });
   }
 
@@ -1007,6 +1207,183 @@ window.APP_CONFIG = {
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
     });
   }
+
+  // ================= 顾问端：Zoom 线上诊断 =================
+  var liveCode = null, liveUnsub = null, liveData = null;
+
+  function makeCode(){
+    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 去掉容易看错的 0O1I
+    var s = '';
+    for(var i=0;i<6;i++) s += chars.charAt(Math.floor(Math.random()*chars.length));
+    return s;
+  }
+  function clientUrl(code){
+    return location.origin + location.pathname + '?join=' + code;
+  }
+
+  async function startLiveSession(){
+    if(!db) return;
+    liveCode = makeCode();
+    localStorage.setItem('m9_live_code', liveCode);
+    document.getElementById('liveCode').textContent = liveCode;
+    document.getElementById('liveLink').textContent = clientUrl(liveCode);
+    try{
+      await db.collection('sessions').doc(liveCode).set({
+        createdAt: Date.now(), consultantName: myName, status: 'waiting', step: 0
+      });
+      await ctlRef().set({screen: clientScreenFor(screens[current] || 'intro'), ts: Date.now(), consultantName: myName});
+    }catch(e){}
+    watchLiveSession();
+  }
+
+  function watchLiveSession(){
+    if(liveUnsub){ liveUnsub(); liveUnsub = null; }
+    if(!db || !liveCode) return;
+    liveUnsub = dataRef().onSnapshot(function(snap){
+      liveData = snap.exists ? snap.data() : null;
+      renderLivePanel();
+      // 客户填的东西同时套进顾问自己的画面，顾问才能直接往下带
+      if(liveData && liveData.writer !== 'consultant') applyRemote(liveData);
+    }, function(){});
+  }
+
+  function renderLivePanel(){
+    var dot = document.getElementById('liveDot');
+    var txt = document.getElementById('liveStatusText');
+    var fill = document.getElementById('liveProgFill');
+    var dimsWrap = document.getElementById('liveDims');
+    var finWrap = document.getElementById('liveFinWrap');
+    var reportBtn = document.getElementById('liveReportBtn');
+
+    if(!liveData || !liveData.clientJoinedAt){
+      dot.className = 'live-dot';
+      txt.textContent = '等待客户打开链接…';
+      fill.style.width = '0%';
+      dimsWrap.innerHTML = '<div class="live-waiting">客户开始作答后，这里会即时显示分数和话术提示。</div>';
+      finWrap.style.display = 'none';
+      reportBtn.style.display = 'none';
+      return;
+    }
+
+    dot.className = 'live-dot on';
+    var done = liveData.status === 'completed';
+    if(!done && liveData.answers){
+      done = QUAL_DIMENSIONS.every(function(d){
+        var a = liveData.answers[d.key] || [];
+        return a.length === d.questions.length && a.every(function(v){ return v > 0; });
+      });
+    }
+    var step = liveData.step || 0, total = liveData.totalSteps || 10;
+    var name = (liveData.contact && liveData.contact.company) || '';
+    txt.textContent = done
+      ? ('客户已完成作答' + (name ? '（' + name + '）' : ''))
+      : ('客户作答中… 第 ' + (step+1) + ' / ' + total + ' 页' + (name ? '（' + name + '）' : ''));
+    fill.style.width = Math.round(((step+1)/total)*100) + '%';
+
+    // 财务换算（只有顾问看得到）
+    var f = liveData.finance;
+    if(f && f.revenue){
+      finWrap.style.display = 'block';
+      applyIndustry(f.industry || 'fnb');
+      var margin = 100 - ((f.cogs||0)+(f.labor||0)+(f.rent||0)+(f.other||0));
+      var profit = (f.revenue||0) * margin / 100;
+      var healthyCost = BENCH.cogs.healthy+BENCH.labor.healthy+BENCH.rent.healthy+BENCH.other.healthy;
+      var shortfall = ((f.cogs||0)+(f.labor||0)+(f.rent||0)+(f.other||0)) - healthyCost;
+      var uplift = shortfall > 0 ? Math.round((f.revenue||0) * shortfall / 100) : 0;
+      document.getElementById('liveFin').innerHTML =
+        '<div class="lf"><div class="v">RM ' + formatMoney(f.revenue) + '</div><div class="l">月营业额</div></div>' +
+        '<div class="lf"><div class="v">' + margin.toFixed(1) + '%</div><div class="l">净利率（月净利 RM ' + formatMoney(profit) + '）</div></div>' +
+        '<div class="lf"><div class="v">' + (uplift>0 ? 'RM ' + formatMoney(uplift) : '达标') + '</div><div class="l">每月潜在提升空间</div></div>';
+    } else {
+      finWrap.style.display = 'none';
+    }
+
+    // 各维度分数 + 话术
+    var ans = liveData.answers || {};
+    dimsWrap.innerHTML = '';
+    QUAL_DIMENSIONS.forEach(function(d){
+      var arr = ans[d.key] || [];
+      var complete = arr.length === d.questions.length && arr.every(function(v){ return v > 0; });
+      var card = document.createElement('div');
+      card.className = 'live-dim' + (complete ? ' done' : '');
+      if(complete){
+        var sum = arr.reduce(function(a,b){return a+b;},0);
+        var pct = Math.round(((sum - arr.length) / (arr.length*5 - arr.length)) * 100);
+        var tier = tierLabel(pct);
+        card.innerHTML =
+          '<div class="ld-top"><span class="ld-name">' + d.title + '</span>' +
+          '<span class="ld-pct">' + pct + '% · ' + tier.text + '</span></div>' +
+          '<div class="ld-say"><b>现在可以这样问</b>' + provocationFor(d.key, pct) + '</div>';
+      } else {
+        card.innerHTML = '<div class="ld-top"><span class="ld-name">' + d.title + '</span>' +
+                         '<span class="ld-pct" style="font-size:13px;color:var(--ink-soft);">尚未作答</span></div>';
+      }
+      dimsWrap.appendChild(card);
+    });
+
+    var allAnswered = QUAL_DIMENSIONS.every(function(d){
+      var a = (liveData.answers || {})[d.key] || [];
+      return a.length === d.questions.length && a.every(function(v){ return v > 0; });
+    });
+    reportBtn.style.display = (done || allAnswered) ? 'block' : 'none';
+  }
+
+  // 把客户的资料载入顾问端，开启完整报告
+  function loadLiveIntoReport(){
+    if(!liveData) return;
+    if(liveData.finance) finance = Object.assign(finance, liveData.finance);
+    if(liveData.answers){
+      Object.keys(liveData.answers).forEach(function(k){
+        if(answers[k]) answers[k] = liveData.answers[k];
+      });
+    }
+    if(liveData.contact) contact = Object.assign(contact, liveData.contact);
+    applyIndustry(finance.industry || 'fnb');
+    document.getElementById('liveOverlay').classList.remove('open');
+    var idx = screens.indexOf('report');
+    if(idx >= 0) goTo(idx);
+  }
+
+  document.getElementById('liveBtn').addEventListener('click', function(){
+    document.getElementById('liveOverlay').classList.add('open');
+    if(!liveCode){
+      var saved = localStorage.getItem('m9_live_code');
+      if(saved){
+        liveCode = saved;
+        document.getElementById('liveCode').textContent = liveCode;
+        document.getElementById('liveLink').textContent = clientUrl(liveCode);
+        watchLiveSession();
+      } else {
+        startLiveSession();
+      }
+    }
+  });
+  document.getElementById('liveCloseBtn').addEventListener('click', function(){
+    document.getElementById('liveOverlay').classList.remove('open');
+  });
+  document.getElementById('newSessionBtn').addEventListener('click', function(){
+    if(liveUnsub){ liveUnsub(); liveUnsub = null; }
+    liveData = null;
+    startLiveSession();
+    renderLivePanel();
+  });
+  document.getElementById('copyLinkBtn').addEventListener('click', function(){
+    var btn = this;
+    var url = clientUrl(liveCode || '');
+    function ok(){ btn.textContent = '已复制 ✓'; setTimeout(function(){ btn.textContent = '复制链接'; }, 1800); }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(ok, function(){});
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = url; document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); ok(); }catch(e){}
+      document.body.removeChild(ta);
+    }
+  });
+  document.getElementById('previewBtn').addEventListener('click', function(){
+    if(liveCode) window.open(clientUrl(liveCode), '_blank', 'noopener');
+  });
+  document.getElementById('liveReportBtn').addEventListener('click', loadLiveIntoReport);
 
   document.getElementById('rosterBtn').addEventListener('click', function(){
     document.getElementById('rosterOverlay').classList.add('open');
@@ -1068,6 +1445,7 @@ window.APP_CONFIG = {
             Array.prototype.forEach.call(scale.children, function(c){c.classList.remove('sel');});
             opt.classList.add('sel');
             updateNextEnabled(d.key);
+            pushSession();
           });
           scale.appendChild(opt);
         })(v);
@@ -1103,10 +1481,120 @@ window.APP_CONFIG = {
     quizBlocks[key].nextBtn.disabled = !allAnswered;
   }
 
+  // ================= 双屏同步核心 =================
+  var following = false;      // 客户端是否正在跟随顾问的页面
+  var lastLocal = 0;          // 本地最后一次写入时间（防回音）
+  var ctlUnsub = null, dataUnsub = null;
+
+  function sessionCode(){ return CLIENT_MODE ? SESSION_CODE : liveCode; }
+  function dataRef(){ return db.collection('sessions').doc(sessionCode()); }
+  function ctlRef(){ return db.collection('sessions').doc('ctl_' + sessionCode()); }
+
+  // 顾问端的页面名 → 客户端该看到的页面名
+  function clientScreenFor(name){
+    if(name === 'report') return 'done';
+    if(name.indexOf('insight_') === 0) return 'wait';
+    return name;
+  }
+
+  // 直接按名字显示某一页（不动 current 索引）
+  function showScreenByName(name){
+    document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+    Object.keys(quizBlocks).forEach(function(k){ quizBlocks[k].block.style.display = 'none'; });
+    if(name.indexOf('q_') === 0){
+      var key = name.slice(2);
+      if(quizBlocks[key]){ quizSection.classList.add('active'); quizBlocks[key].block.style.display = 'block'; }
+      return;
+    }
+    if(name === 'done'){
+      var el0 = document.querySelector('[data-screen="done"]');
+      document.getElementById('doneScore').textContent = overallScore();
+      if(el0) el0.classList.add('active');
+      if(CLIENT_MODE) pushSession({status:'completed', completedAt: Date.now(), totalScore: overallScore()});
+      return;
+    }
+    var el = document.querySelector('[data-screen="' + name + '"]');
+    if(el) el.classList.add('active');
+  }
+
+  // 把远端资料套回本地状态 + 画面
+  function applyRemote(d){
+    if(!d) return;
+    if(d.finance){
+      finance = Object.assign(finance, d.finance);
+      var map = {fRevenue:'revenue', fCogs:'cogs', fLabor:'labor', fRent:'rent', fOther:'other'};
+      Object.keys(map).forEach(function(id){
+        var el = document.getElementById(id);
+        if(el && document.activeElement !== el && finance[map[id]] != null && finance[map[id]] !== 0){
+          el.value = finance[map[id]];
+        }
+      });
+      if(finance.industry){ var is = document.getElementById('fIndustry'); if(is) is.value = finance.industry; applyIndustry(finance.industry); }
+      var rc = document.getElementById('rCash');
+      if(rc && document.activeElement !== rc && finance.cashMonths) rc.value = finance.cashMonths;
+      var rt = document.getElementById('rTrend');
+      if(rt && finance.trend) rt.value = finance.trend;
+    }
+    if(d.answers){
+      Object.keys(d.answers).forEach(function(k){
+        if(!answers[k] || !quizBlocks[k]) return;
+        answers[k] = d.answers[k];
+        var scales = quizBlocks[k].block.querySelectorAll('.scale');
+        answers[k].forEach(function(v, qi){
+          if(!scales[qi]) return;
+          Array.prototype.forEach.call(scales[qi].children, function(c, ci){
+            c.classList.toggle('sel', v > 0 && ci === v - 1);
+          });
+        });
+        updateNextEnabled(k);
+      });
+    }
+    if(d.contact){
+      contact = Object.assign(contact, d.contact);
+      var cmap = {cName:'name', cCompany:'company', cPhone:'phone', cOutlets:'outlets'};
+      Object.keys(cmap).forEach(function(id){
+        var el = document.getElementById(id);
+        if(el && document.activeElement !== el && contact[cmap[id]]) el.value = contact[cmap[id]];
+      });
+    }
+  }
+
+  // 顾问端：把目前页面推给客户
+  function pushCtl(){
+    if(CLIENT_MODE || !db || !liveCode) return;
+    var sc = clientScreenFor(screens[current] || 'intro');
+    lastLocal = Date.now();
+    ctlRef().set({screen: sc, ts: Date.now(), consultantName: myName}, {merge:true}).catch(function(){});
+  }
+
+  // 两端共用：把作答资料推上去
+  var pushTimer = null;
+  function pushSession(extra){
+    if(!db || !sessionCode()) return;
+    clearTimeout(pushTimer);
+    lastLocal = Date.now();
+    var payload = Object.assign({
+      step: current,
+      totalSteps: screens.length,
+      screenName: screens[current] || '',
+      finance: finance,
+      answers: answers,
+      contact: contact,
+      writer: CLIENT_MODE ? 'client' : 'consultant',
+      updatedAt: Date.now()
+    }, extra || {});
+    pushTimer = setTimeout(function(){
+      lastLocal = Date.now();
+      dataRef().set(payload, {merge:true}).catch(function(){});
+    }, 350);
+  }
+
   function goTo(index){
     if(index < 0 || index >= screens.length) return;
     current = index;
     render();
+    pushSession();
+    pushCtl();
     window.scrollTo({top:0, behavior:'auto'});
   }
 
@@ -1137,6 +1625,10 @@ window.APP_CONFIG = {
     } else if(name === 'report'){
       buildReport();
       document.querySelector('[data-screen="report"]').classList.add('active');
+    } else if(name === 'done'){
+      document.getElementById('doneScore').textContent = overallScore();
+      document.querySelector('[data-screen="done"]').classList.add('active');
+      pushSession({status:'completed', completedAt: Date.now(), totalScore: overallScore()});
     }
   }
 
