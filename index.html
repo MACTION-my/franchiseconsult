@@ -251,11 +251,19 @@ window.APP_CONFIG = {
     color:var(--gold); text-align:center; font-size:clamp(12.5px,1vw,15px); font-weight:600;
     padding:26px 16px calc(14px + env(safe-area-inset-bottom,0px));}
   body.following .follow-hint{display:block;}
-  body.following .btn-row{display:none !important;}
-  body.following #startBtn,
-  body.following #financeForm button[type=submit],
-  body.following #readinessForm button[type=submit],
-  body.following #contactForm button[type=submit]{display:none !important;}
+  /* 跟随模式：上一步 / 返回这类自己的导航才隐藏 */
+  body.following .btn-row button.ghost{display:none !important;}
+  body.following .btn-row{margin-top:18px;}
+  /* 前进用的按钮不隐藏，改成「等顾问」的停用状态，画面才不会看起来坏掉 */
+  body.following button.wait-cta{
+    background:rgba(255,238,205,.10) !important;
+    color:var(--ink-soft) !important;
+    border:1px dashed var(--gold-line) !important;
+    box-shadow:none !important;
+    cursor:default !important;
+    opacity:1 !important;
+  }
+  body.following button.wait-cta::before{content:'⏳  ';}
   body.following .wrap{padding-bottom:96px;}
 
   .done-box{text-align:center; padding:clamp(30px,5vh,60px) clamp(20px,2vw,32px);
@@ -1096,6 +1104,29 @@ window.APP_CONFIG = {
     subscribeRoster();
   }
 
+  // 跟随模式下，把「前进」按钮变成停用的等待状态（不隐藏，避免画面看起来坏掉）
+  function applyFollowUI(){
+    var targets = [
+      [document.getElementById('startBtn'), '等待顾问开始诊断'],
+      [document.querySelector('#financeForm button[type=submit]'), '填好后，顾问会带你下一步'],
+      [document.querySelector('#readinessForm button[type=submit]'), '填好后，顾问会带你下一步'],
+      [document.querySelector('#contactForm button[type=submit]'), '填好后，顾问会帮你提交']
+    ];
+    Object.keys(quizBlocks).forEach(function(k){
+      targets.push([quizBlocks[k].nextBtn, '选好后，顾问会带你下一题']);
+    });
+    targets.forEach(function(t){
+      var btn = t[0];
+      if(!btn || btn.dataset.waitApplied) return;
+      btn.dataset.waitApplied = '1';
+      btn.classList.add('wait-cta');
+      btn.textContent = t[1];
+      btn.disabled = true;
+      btn.setAttribute('aria-disabled', 'true');
+      btn.addEventListener('click', function(e){ e.preventDefault(); });
+    });
+  }
+
   // 客户端：匿名登入，直接进入问卷，不需要密码
   async function startClientMode(){
     loginGate.classList.add('hidden');
@@ -1131,6 +1162,7 @@ window.APP_CONFIG = {
         if(!d || !d.screen) return;
         following = true;
         document.body.classList.add('following');
+        applyFollowUI();
         showScreenByName(d.screen);
         window.scrollTo({top:0, behavior:'auto'});
       }, function(){});
@@ -1613,6 +1645,7 @@ window.APP_CONFIG = {
   });
 
   function updateNextEnabled(key){
+    if(following) return;   // 跟随模式由顾问带页，按钮保持等待状态
     var allAnswered = answers[key].every(function(v){return v>0;});
     quizBlocks[key].nextBtn.disabled = !allAnswered;
   }
