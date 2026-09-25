@@ -240,6 +240,12 @@ window.APP_CONFIG = {
   .live-fin .lf .l{font-size:clamp(11px,.9vw,13.5px); color:var(--ink-soft); margin-top:2px;}
   .live-waiting{text-align:center; padding:40px 20px; color:var(--ink-soft); font-size:clamp(14px,1.1vw,17px);}
 
+  .conn-error{display:none; position:fixed; left:0; right:0; top:0; z-index:300;
+    background:#8B1A10; color:#FFE3D6; text-align:center; font-size:clamp(13px,1.05vw,16px);
+    font-weight:600; padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;
+    box-shadow:0 2px 14px rgba(0,0,0,.35); line-height:1.5;}
+  .conn-error.show{display:block;}
+
   .follow-hint{display:none; position:fixed; left:0; right:0; bottom:0; z-index:60;
     background:linear-gradient(180deg, rgba(110,10,14,0) 0%, rgba(110,10,14,.96) 45%);
     color:var(--gold); text-align:center; font-size:clamp(12.5px,1vw,15px); font-weight:600;
@@ -784,6 +790,8 @@ window.APP_CONFIG = {
   </section>
 </div>
 
+<div class="conn-error" id="connError"></div>
+
 <div class="follow-hint" id="followHint">跟着顾问的节奏作答，顾问会带你到下一页</div>
 
 <div class="overlay" id="liveOverlay">
@@ -806,6 +814,14 @@ window.APP_CONFIG = {
       <span id="liveStatusText">等待客户打开链接…</span>
     </div>
     <div class="live-prog-track"><div class="live-prog-fill" id="liveProgFill" style="width:0%"></div></div>
+
+    <div id="liveWaitHint" style="display:none; background:rgba(255,238,205,.06); border:1px solid var(--gold-line); border-radius:3px; padding:16px 18px; margin-bottom:20px; font-size:clamp(13px,1.05vw,16px); color:var(--ink-soft); line-height:1.7;">
+      <b style="color:var(--gold);">一直停在这里？</b><br>
+      1. 客户那边如果出现红色错误条，照着上面写的做<br>
+      2. Firebase → Authentication → Sign-in method → 确认「匿名 / Anonymous」已启用<br>
+      3. Firebase → Authentication → Settings → 已授权网域 → 确认有这个网站的网址<br>
+      4. 请客户强制刷新页面（Ctrl + Shift + R）
+    </div>
 
     <div id="liveFinWrap" style="display:none;">
       <div class="section-title" style="font-size:clamp(16px,1.4vw,20px);">客户填的财务数据</div>
@@ -1102,7 +1118,21 @@ window.APP_CONFIG = {
         applyRemote(d);
       }, function(){});
     }catch(e){
-      // 连不上也让客户能答题，最后再试着上传
+      var msg = (e && (e.code || e.message)) || '';
+      var box = document.getElementById('connError');
+      var tip;
+      if(String(msg).indexOf('operation-not-allowed') >= 0){
+        tip = '连线失败：Firebase 的「匿名登录」还没启用。请通知顾问到 Firebase → Authentication → Sign-in method 启用「匿名 / Anonymous」。';
+      } else if(String(msg).indexOf('permission') >= 0 || String(msg).indexOf('insufficient') >= 0){
+        tip = '连线失败：资料库权限设定不符。请通知顾问更新 Firestore 规则（sessions 那一段）。';
+      } else if(String(msg).indexOf('unauthorized-domain') >= 0){
+        tip = '连线失败：这个网址还没被授权。请通知顾问到 Firebase → Authentication → Settings → 已授权网域 加入本网站网址。';
+      } else {
+        tip = '连线失败，你的答案暂时无法同步给顾问。请通知顾问，或重新整理页面再试。' + (msg ? '（' + msg + '）' : '');
+      }
+      box.textContent = tip;
+      box.classList.add('show');
+      console.error('[M9] client sync failed:', e);
     }
 
     // 客户输入时即时同步（顾问那边看得到）
@@ -1258,6 +1288,8 @@ window.APP_CONFIG = {
     if(!liveData || !liveData.clientJoinedAt){
       dot.className = 'live-dot';
       txt.textContent = '等待客户打开链接…';
+      var hint = document.getElementById('liveWaitHint');
+      if(hint) hint.style.display = 'block';
       fill.style.width = '0%';
       dimsWrap.innerHTML = '<div class="live-waiting">客户开始作答后，这里会即时显示分数和话术提示。</div>';
       finWrap.style.display = 'none';
@@ -1266,6 +1298,8 @@ window.APP_CONFIG = {
     }
 
     dot.className = 'live-dot on';
+    var hintOn = document.getElementById('liveWaitHint');
+    if(hintOn) hintOn.style.display = 'none';
     var done = liveData.status === 'completed';
     if(!done && liveData.answers){
       done = QUAL_DIMENSIONS.every(function(d){
