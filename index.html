@@ -35,7 +35,6 @@ window.APP_CONFIG = {
 
   // 4) 顾问收单的 WhatsApp 号码（国际码开头，不要 + 和空格）
   salesWhatsapp: "60127194133"
-};
 </script>
 <style>
   :root{
@@ -231,6 +230,20 @@ window.APP_CONFIG = {
   .live-dim .ld-top{display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:6px;}
   .live-dim .ld-name{font-weight:700; font-size:clamp(14.5px,1.15vw,18px);}
   .live-dim .ld-pct{font-family:var(--serif); font-size:clamp(16px,1.4vw,21px); color:var(--gold);}
+  .live-dim .ld-qs{margin-top:12px; border-top:1px solid var(--line); padding-top:10px;}
+  .live-dim .ld-q{display:flex; align-items:flex-start; justify-content:space-between; gap:14px;
+    padding:7px 0; border-bottom:1px solid rgba(245,206,110,.10); font-size:clamp(12.5px,1vw,15px);}
+  .live-dim .ld-q:last-child{border-bottom:none;}
+  .live-dim .ld-qt{color:var(--ink-soft); line-height:1.5; flex:1;}
+  .live-dim .ld-qv{flex:none; font-weight:700; white-space:nowrap; padding:3px 10px; border-radius:12px;
+    font-size:clamp(11.5px,.95vw,13.5px);}
+  .live-dim .ld-q.low  .ld-qv{background:var(--risk-soft); color:var(--risk);}
+  .live-dim .ld-q.low  .ld-qt{color:var(--ink);}
+  .live-dim .ld-q.mid  .ld-qv{background:var(--mid-soft); color:var(--mid);}
+  .live-dim .ld-q.high .ld-qv{background:var(--good-soft); color:var(--good);}
+  .live-dim .ld-q.none .ld-qv{background:rgba(255,238,205,.06); color:var(--ink-soft); font-weight:500;}
+  .live-dim .ld-q.none .ld-qt{opacity:.5;}
+
   .live-dim .ld-say{font-size:clamp(13.5px,1.1vw,17px); color:var(--ink); font-family:var(--serif); line-height:1.55;
     border-left:2px solid var(--gold); padding-left:12px; margin-top:10px;}
   .live-dim .ld-say b{color:var(--gold); font-family:var(--sans); font-size:11.5px; display:block; margin-bottom:4px; font-weight:700;}
@@ -264,7 +277,7 @@ window.APP_CONFIG = {
     opacity:1 !important;
   }
   body.following button.wait-cta::before{content:'⏳  ';}
-  body.following .wrap{padding-bottom:96px;}
+  body.following .wrap{padding-bottom:132px;}
 
   .done-box{text-align:center; padding:clamp(30px,5vh,60px) clamp(20px,2vw,32px);
     background:rgba(255,238,205,.07); border:1px solid var(--gold-line); border-radius:4px;}
@@ -1407,21 +1420,49 @@ window.APP_CONFIG = {
     dimsWrap.innerHTML = '';
     QUAL_DIMENSIONS.forEach(function(d){
       var arr = ans[d.key] || [];
-      var complete = arr.length === d.questions.length && arr.every(function(v){ return v > 0; });
+      var answeredCount = arr.filter(function(v){ return v > 0; }).length;
+      var complete = arr.length === d.questions.length && answeredCount === d.questions.length;
+      var started = answeredCount > 0;
       var card = document.createElement('div');
-      card.className = 'live-dim' + (complete ? ' done' : '');
+      card.className = 'live-dim' + ((complete || started) ? ' done' : '');
+
+      // 标题列
+      var headRight;
       if(complete){
         var sum = arr.reduce(function(a,b){return a+b;},0);
         var pct = Math.round(((sum - arr.length) / (arr.length*5 - arr.length)) * 100);
         var tier = tierLabel(pct);
-        card.innerHTML =
-          '<div class="ld-top"><span class="ld-name">' + d.title + '</span>' +
-          '<span class="ld-pct">' + pct + '% · ' + tier.text + '</span></div>' +
-          '<div class="ld-say"><b>现在可以这样问</b>' + provocationFor(d.key, pct) + '</div>';
+        headRight = '<span class="ld-pct">' + pct + '% · ' + tier.text + '</span>';
+      } else if(started){
+        headRight = '<span class="ld-pct" style="font-size:13px;color:var(--mid);">作答中 ' + answeredCount + '/' + d.questions.length + '</span>';
       } else {
-        card.innerHTML = '<div class="ld-top"><span class="ld-name">' + d.title + '</span>' +
-                         '<span class="ld-pct" style="font-size:13px;color:var(--ink-soft);">尚未作答</span></div>';
+        headRight = '<span class="ld-pct" style="font-size:13px;color:var(--ink-soft);">尚未作答</span>';
       }
+      var html = '<div class="ld-top"><span class="ld-name">' + d.title + '</span>' + headRight + '</div>';
+
+      // 逐题显示客户实际选了什么
+      if(started){
+        html += '<div class="ld-qs">';
+        d.questions.forEach(function(qtext, qi){
+          var v = arr[qi] || 0;
+          var cls = v === 0 ? 'none' : (v <= 2 ? 'low' : (v === 3 ? 'mid' : 'high'));
+          var label = v === 0 ? '未答' : (v + ' · ' + SCALE_LABELS[v-1]);
+          html += '<div class="ld-q ' + cls + '">' +
+                    '<span class="ld-qt">' + qtext + '</span>' +
+                    '<span class="ld-qv">' + label + '</span>' +
+                  '</div>';
+        });
+        html += '</div>';
+      }
+
+      // 话术：答完整组才给（针对整体分数）
+      if(complete){
+        var sum2 = arr.reduce(function(a,b){return a+b;},0);
+        var pct2 = Math.round(((sum2 - arr.length) / (arr.length*5 - arr.length)) * 100);
+        html += '<div class="ld-say"><b>现在可以这样问</b>' + provocationFor(d.key, pct2) + '</div>';
+      }
+
+      card.innerHTML = html;
       dimsWrap.appendChild(card);
     });
 
