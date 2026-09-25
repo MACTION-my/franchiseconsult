@@ -34,7 +34,7 @@ window.APP_CONFIG = {
   aiProxyUrl: "https://aianalysis-swzd5i7tuq-as.a.run.app",
 
   // 4) 顾问收单的 WhatsApp 号码（国际码开头，不要 + 和空格）
-  salesWhatsapp: "60125676118"
+  salesWhatsapp: "60127194133"
 };
 </script>
 <style>
@@ -416,6 +416,30 @@ window.APP_CONFIG = {
   .roster-row .rr-score{font-family:var(--serif); font-weight:700; font-size:18px; color:var(--gold); white-space:nowrap;}
   .roster-row .rr-meta{font-size:12.5px; color:var(--ink-soft); margin-bottom:10px;}
   .roster-row select{font-family:var(--sans); font-size:13px; padding:7px 10px; border:1px solid var(--gold-line); border-radius:3px; background:rgba(60,4,8,.6); color:var(--ink);}
+  .rr-actions{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:4px;}
+  .rr-btn{appearance:none; cursor:pointer; font-family:var(--sans); font-size:clamp(12.5px,1vw,14.5px);
+    font-weight:600; padding:7px 13px; border-radius:20px;
+    border:1px solid var(--gold-line); background:rgba(255,238,205,.07); color:var(--gold);}
+  .rr-btn:hover{background:rgba(255,238,205,.14);}
+  .rr-btn.danger{border-color:rgba(255,150,120,.45); color:var(--risk); background:rgba(255,120,90,.08);}
+  .rr-btn.danger:hover{background:rgba(255,120,90,.16);}
+  .rr-btn:disabled{opacity:.5; cursor:not-allowed;}
+
+  .rr-archive{margin-top:14px; padding-top:14px; border-top:1px solid var(--gold-line);}
+  .rr-archive .ra-tag{font-size:11.5px; color:var(--ink-soft); margin-bottom:12px; font-style:italic;}
+  .rr-archive .ra-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:12px;}
+  @media (max-width:520px){ .rr-archive .ra-grid{grid-template-columns:1fr 1fr;} }
+  .rr-archive .ra-grid > div{background:rgba(40,2,5,.35); border-radius:3px; padding:10px 12px;}
+  .rr-archive .ra-grid span{display:block; font-size:11px; color:var(--ink-soft); margin-bottom:3px;}
+  .rr-archive .ra-grid b{font-family:var(--serif); font-size:clamp(15px,1.4vw,19px); color:var(--gold);}
+  .rr-archive .ra-dims{display:grid; grid-template-columns:repeat(2,1fr); gap:6px 18px; margin-bottom:12px;}
+  .rr-archive .ra-dim{display:flex; justify-content:space-between; font-size:13px; color:var(--ink-soft);
+    border-bottom:1px solid var(--line); padding:5px 0;}
+  .rr-archive .ra-dim b{color:var(--ink); font-family:var(--serif);}
+  .rr-archive .ra-note{font-size:13.5px; color:var(--ink-soft); line-height:1.6;
+    background:rgba(40,2,5,.3); padding:12px 14px; border-radius:3px;}
+  .rr-archive .ra-note b{color:var(--gold);}
+
   .roster-empty{text-align:center; padding:60px 20px; color:var(--ink-soft); font-size:14.5px;}
   .status-pill{display:inline-block; font-size:11.5px; padding:3px 9px; border-radius:12px; font-weight:600;}
   .status-pill.待跟进{background:var(--mid-soft); color:var(--mid);}
@@ -1218,6 +1242,7 @@ window.APP_CONFIG = {
         '<div class="rr-meta">'+dateStr+(consultantName?' · 顾问 '+escapeHtml(consultantName):'')+' · '+escapeHtml(v.expansionVerdict||v.quadrantName||'')+
           (v.netMargin!=null ? ' · 净利率 '+v.netMargin.toFixed(1)+'%' : '')+'</div>';
       var statusWrap = document.createElement('div');
+      statusWrap.className = 'rr-actions';
       var sel = document.createElement('select');
       ['待跟进','已预约','已成交','已流失'].forEach(function(s){
         var o = document.createElement('option'); o.value=s; o.textContent=s;
@@ -1228,6 +1253,19 @@ window.APP_CONFIG = {
         db.doc('clients/'+docSnap.id).update({followUpStatus: sel.value}).catch(function(){});
       });
       statusWrap.appendChild(sel);
+
+      var viewBtn = document.createElement('button');
+      viewBtn.className = 'rr-btn';
+      viewBtn.textContent = '查看报告';
+      viewBtn.addEventListener('click', function(){ openSavedReport(docSnap.id, v, row); });
+      statusWrap.appendChild(viewBtn);
+
+      var delBtn = document.createElement('button');
+      delBtn.className = 'rr-btn danger';
+      delBtn.textContent = '删除';
+      delBtn.addEventListener('click', function(){ deleteSavedRecord(docSnap.id, v, delBtn); });
+      statusWrap.appendChild(delBtn);
+
       row.appendChild(statusWrap);
       list.appendChild(row);
     });
@@ -1418,6 +1456,70 @@ window.APP_CONFIG = {
     if(liveCode) window.open(clientUrl(liveCode), '_blank', 'noopener');
   });
   document.getElementById('liveReportBtn').addEventListener('click', loadLiveIntoReport);
+
+  // ---- 打开已存档的报告 ----
+  function openSavedReport(id, v, row){
+    // 新版记录（schema 2）有原始资料，可以完整还原
+    if(v.rawAnswers && v.rawFinance && v.rawFinance.cogs != null){
+      finance = Object.assign({}, finance, v.rawFinance);
+      Object.keys(answers).forEach(function(k){
+        if(v.rawAnswers[k]) answers[k] = v.rawAnswers[k];
+      });
+      customerQuotes = Object.assign({}, v.rawQuotes || {});
+      contact = {name: v.name, company: v.company, phone: v.phone, outlets: v.outlets};
+      savedDocId = id;
+      applyIndustry(finance.industry || 'fnb');
+      document.getElementById('rosterOverlay').classList.remove('open');
+      var idx = screens.indexOf('report');
+      if(idx >= 0) goTo(idx);
+      setTimeout(function(){
+        var note = document.getElementById('consultantNote');
+        if(note) note.value = v.consultantNote || '';
+        var aiOut = document.getElementById('aiOutput');
+        if(aiOut && v.aiAnalysis){ aiOut.textContent = v.aiAnalysis; aiOut.className = 'ai-output'; }
+        var sb = document.getElementById('saveBtn');
+        if(sb) sb.textContent = '更新这份存档';
+      }, 120);
+      return;
+    }
+
+    // 旧记录：没有存原始作答，只能显示摘要
+    var existing = row.querySelector('.rr-archive');
+    if(existing){ existing.remove(); return; }
+    var box = document.createElement('div');
+    box.className = 'rr-archive';
+    var dims = v.dimScores || {};
+    var dimHtml = Object.keys(dims).map(function(k){
+      return '<div class="ra-dim"><span>' + dimTitleByKey(k) + '</span><b>' + dims[k] + '%</b></div>';
+    }).join('');
+    box.innerHTML =
+      '<div class="ra-tag">旧存档 · 仅摘要（当时未保存原始作答，无法重建完整报告）</div>' +
+      '<div class="ra-grid">' +
+        '<div><span>综合评分</span><b>' + (v.overallScore != null ? v.overallScore : '-') + '</b></div>' +
+        '<div><span>扩张判断</span><b>' + (v.expansionVerdict || v.quadrantName || '-') + '</b></div>' +
+        '<div><span>月营业额</span><b>RM ' + (v.revenue != null ? formatMoney(v.revenue) : '-') + '</b></div>' +
+        '<div><span>净利率</span><b>' + (v.netMargin != null ? v.netMargin.toFixed(1) + '%' : '-') + '</b></div>' +
+        '<div><span>月净利</span><b>RM ' + (v.netProfit != null ? formatMoney(v.netProfit) : '-') + '</b></div>' +
+        '<div><span>潜在提升</span><b>' + (v.potentialUplift ? 'RM ' + formatMoney(v.potentialUplift) : '达标') + '</b></div>' +
+      '</div>' +
+      (dimHtml ? '<div class="ra-dims">' + dimHtml + '</div>' : '') +
+      (v.consultantNote ? '<div class="ra-note"><b>顾问记录：</b>' + escapeHtml(v.consultantNote) + '</div>' : '');
+    row.appendChild(box);
+  }
+
+  // ---- 删除存档 ----
+  async function deleteSavedRecord(id, v, btn){
+    var label = (v.company || v.name || '这笔记录');
+    if(!window.confirm('确定要删除「' + label + '」的诊断记录吗？\n删除后无法复原。')) return;
+    btn.disabled = true; btn.textContent = '删除中…';
+    try{
+      await db.collection('clients').doc(id).delete();
+      if(savedDocId === id) savedDocId = null;
+    }catch(e){
+      btn.disabled = false; btn.textContent = '删除';
+      window.alert('删除失败：' + (e.code || e.message) + '\n\n如果显示 permission-denied，代表 Firestore 规则还不允许删除，需要更新规则。');
+    }
+  }
 
   document.getElementById('rosterBtn').addEventListener('click', function(){
     document.getElementById('rosterOverlay').classList.add('open');
@@ -2279,6 +2381,12 @@ window.APP_CONFIG = {
       multiOutlet: finance.multi, bestMargin: finance.bestMargin, worstMargin: finance.worstMargin,
       consultantNote: document.getElementById('consultantNote').value,
       consultantName: myName,
+      // 完整还原报告需要的原始资料
+      rawAnswers: answers,
+      rawFinance: finance,
+      rawQuotes: customerQuotes,
+      aiAnalysis: (document.getElementById('aiOutput') || {}).textContent || '',
+      schema: 2,
       followUpStatus: savedDocId ? undefined : '待跟进',
       createdAt: savedDocId ? undefined : Date.now(),
       updatedAt: Date.now()
