@@ -218,6 +218,30 @@ window.APP_CONFIG = {
     letter-spacing:.14em; margin:6px 0 4px;}
   .live-link{font-size:clamp(12.5px,1vw,15px); color:var(--ink-soft); word-break:break-all; margin:10px 0 14px;
     background:rgba(40,2,5,.4); padding:10px 12px; border-radius:3px;}
+  .pace-box{background:rgba(255,238,205,.06); border:1px solid var(--gold-line); border-radius:4px;
+    padding:clamp(14px,1.4vw,20px); margin-bottom:20px;}
+  .pace-row{display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;}
+  .pace-label{font-size:clamp(13.5px,1.05vw,16px); font-weight:600;}
+  .pace-switch{display:flex; background:rgba(40,2,5,.45); border-radius:20px; padding:3px;}
+  .pace-opt{appearance:none; border:none; cursor:pointer; background:transparent; color:var(--ink-soft);
+    font-family:var(--sans); font-size:clamp(12.5px,1vw,14.5px); font-weight:600;
+    padding:8px 16px; border-radius:18px; transition:background .15s ease, color .15s ease;}
+  .pace-opt.active{background:linear-gradient(135deg,#FFE39B,#E9BB55); color:#6E0A0E;}
+  .pace-hint{font-size:clamp(12.5px,1vw,14.5px); color:var(--ink-soft); margin:10px 0 0; line-height:1.6;}
+
+  .pace-nav{background:linear-gradient(135deg, rgba(255,227,155,.14), rgba(233,187,85,.08));
+    border:1px solid var(--gold); border-radius:4px; padding:clamp(14px,1.4vw,20px); margin-bottom:20px;}
+  .pace-nav.hidden{display:none;}
+  .pn-where{font-size:clamp(13px,1.05vw,15.5px); color:var(--ink-soft); margin-bottom:12px;}
+  .pn-where b{color:var(--gold); font-family:var(--serif); font-size:clamp(15px,1.3vw,19px);}
+  .pn-btns{display:flex; gap:10px;}
+  .pn-btn{flex:1; appearance:none; cursor:pointer; font-family:var(--sans); font-weight:700;
+    font-size:clamp(14px,1.15vw,17px); padding:clamp(13px,1.3vw,17px) 16px; border-radius:3px;
+    border:1px solid var(--gold-line); background:rgba(40,2,5,.35); color:var(--gold);}
+  .pn-btn.primary{background:linear-gradient(135deg,#FFE39B,#E9BB55); color:#6E0A0E; border-color:transparent; flex:2;}
+  .pn-btn:disabled{opacity:.35; cursor:not-allowed;}
+  .pn-hint{font-size:clamp(12px,.95vw,14px); color:var(--ink-soft); margin:10px 0 0; line-height:1.55;}
+
   .live-status{display:flex; align-items:center; gap:10px; font-size:clamp(14px,1.1vw,17px); margin-bottom:20px;}
   .live-dot{width:9px; height:9px; border-radius:50%; background:var(--ink-soft); flex:none;}
   .live-dot.on{background:var(--good); box-shadow:0 0 0 4px rgba(159,227,184,.2); animation:pulse 1.8s ease-in-out infinite;}
@@ -855,6 +879,26 @@ window.APP_CONFIG = {
       <button class="btn-secondary" id="newSessionBtn">换一位客户（重新生成）</button>
     </div>
 
+    <div class="pace-box">
+      <div class="pace-row">
+        <span class="pace-label">作答模式</span>
+        <div class="pace-switch" id="paceSwitch">
+          <button type="button" class="pace-opt active" data-pace="led">顾问带页</button>
+          <button type="button" class="pace-opt" data-pace="self">客户自行翻页</button>
+        </div>
+      </div>
+      <p class="pace-hint" id="paceHint">客户的画面跟着你走，他那边没有「下一步」按钮。你按一次，他才前进一页。</p>
+    </div>
+
+    <div class="pace-nav" id="paceNav">
+      <div class="pn-where">你现在在：<b id="pnScreen">开场</b></div>
+      <div class="pn-btns">
+        <button type="button" class="pn-btn" id="pnPrev">← 上一页</button>
+        <button type="button" class="pn-btn primary" id="pnNext">下一页 →</button>
+      </div>
+      <p class="pn-hint" id="pnHint"></p>
+    </div>
+
     <div class="live-status">
       <span class="live-dot" id="liveDot"></span>
       <span id="liveStatusText">等待客户打开链接…</span>
@@ -873,6 +917,7 @@ window.APP_CONFIG = {
       <div class="section-title" style="font-size:clamp(16px,1.4vw,20px);">客户填的财务数据</div>
       <p class="section-sub">客户端看不到这些换算结果</p>
       <div class="live-fin" id="liveFin"></div>
+      <div id="liveFinRaw"></div>
     </div>
 
     <div class="section-title" style="font-size:clamp(16px,1.4vw,20px);">现场话术提示</div>
@@ -1118,6 +1163,24 @@ window.APP_CONFIG = {
     subscribeRoster();
   }
 
+  // 放开客户的按钮（客户自行翻页模式）
+  function releaseFollowUI(){
+    document.body.classList.remove('following');
+    var btns = document.querySelectorAll('button[data-wait-applied]');
+    Array.prototype.forEach.call(btns, function(btn){
+      if(btn.dataset.origLabel) btn.textContent = btn.dataset.origLabel;
+      btn.classList.remove('wait-cta');
+      btn.removeAttribute('aria-disabled');
+      delete btn.dataset.waitApplied;
+      btn.disabled = false;
+    });
+    // 问卷的「下一题」要按作答进度重新判断
+    Object.keys(quizBlocks).forEach(function(k){
+      var all = answers[k].every(function(v){ return v > 0; });
+      quizBlocks[k].nextBtn.disabled = !all;
+    });
+  }
+
   // 跟随模式下，把「前进」按钮变成停用的等待状态（不隐藏，避免画面看起来坏掉）
   function applyFollowUI(){
     var targets = [
@@ -1132,6 +1195,7 @@ window.APP_CONFIG = {
     targets.forEach(function(t){
       var btn = t[0];
       if(!btn || btn.dataset.waitApplied) return;
+      if(!btn.dataset.origLabel) btn.dataset.origLabel = btn.textContent;
       btn.dataset.waitApplied = '1';
       btn.classList.add('wait-cta');
       btn.textContent = t[1];
@@ -1173,7 +1237,16 @@ window.APP_CONFIG = {
       // 跟随顾问的页面
       ctlUnsub = ctlRef().onSnapshot(function(snap){
         var d = snap.exists ? snap.data() : null;
-        if(!d || !d.screen) return;
+        if(!d) return;
+
+        // 顾问选了「客户自行翻页」：把按钮还给客户，不再跟随
+        if(d.selfPace){
+          if(following){ following = false; releaseFollowUI(); }
+          else { following = false; document.body.classList.remove('following'); }
+          return;
+        }
+
+        if(!d.screen) return;
         following = true;
         document.body.classList.add('following');
         applyFollowUI();
@@ -1345,7 +1418,7 @@ window.APP_CONFIG = {
       await db.collection('sessions').doc(liveCode).set({
         createdAt: Date.now(), consultantName: myName, status: 'waiting', step: 0
       });
-      await ctlRef().set({screen: clientScreenFor(screens[current] || 'intro'), ts: Date.now(), consultantName: myName});
+      await ctlRef().set({screen: clientScreenFor(screens[current] || 'intro'), ts: Date.now(), consultantName: myName, selfPace: selfPace});
     }catch(e){}
     watchLiveSession();
   }
@@ -1362,6 +1435,7 @@ window.APP_CONFIG = {
   }
 
   function renderLivePanel(){
+    if(!CLIENT_MODE && document.getElementById('paceNav')) renderPaceNav();
     var dot = document.getElementById('liveDot');
     var txt = document.getElementById('liveStatusText');
     var fill = document.getElementById('liveProgFill');
@@ -1412,6 +1486,27 @@ window.APP_CONFIG = {
         '<div class="lf"><div class="v">RM ' + formatMoney(f.revenue) + '</div><div class="l">月营业额</div></div>' +
         '<div class="lf"><div class="v">' + margin.toFixed(1) + '%</div><div class="l">净利率（月净利 RM ' + formatMoney(profit) + '）</div></div>' +
         '<div class="lf"><div class="v">' + (uplift>0 ? 'RM ' + formatMoney(uplift) : '达标') + '</div><div class="l">每月潜在提升空间</div></div>';
+
+      // 客户实际填的成本明细（原始数字）
+      var rawRows = [
+        ['原料 / 产品成本', f.cogs, BENCH.cogs.healthy],
+        ['人力成本',        f.labor, BENCH.labor.healthy],
+        ['租金',            f.rent,  BENCH.rent.healthy],
+        ['其他营运开销',    f.other, BENCH.other.healthy]
+      ].map(function(r){
+        var over = (r[1] || 0) > r[2];
+        return '<div class="ld-q ' + (over ? 'low' : 'high') + '">' +
+               '<span class="ld-qt">' + r[0] + '<span style="opacity:.6;"> · 健康值 ' + r[2] + '%</span></span>' +
+               '<span class="ld-qv">' + (r[1] != null ? r[1] : '-') + '%</span></div>';
+      }).join('');
+      var extra = '<div class="ld-q ' + ((f.cashMonths||0) < 3 ? 'low' : 'high') + '">' +
+                  '<span class="ld-qt">现金可撑几个月</span><span class="ld-qv">' + (f.cashMonths || 0) + ' 个月</span></div>' +
+                  '<div class="ld-q ' + ((f.trend === '下滑' || f.trend === '持平') ? 'low' : 'high') + '">' +
+                  '<span class="ld-qt">过去 12 个月营收走势</span><span class="ld-qv">' + (f.trend || '未填') + '</span></div>' +
+                  (f.multi ? '<div class="ld-q low"><span class="ld-qt">分店净利率落差</span><span class="ld-qv">' +
+                    f.bestMargin + '% / ' + f.worstMargin + '%</span></div>' : '');
+      document.getElementById('liveFinRaw').innerHTML =
+        '<div class="ld-qs" style="border-top:none; padding-top:0;">' + rawRows + extra + '</div>';
     } else {
       finWrap.style.display = 'none';
     }
@@ -1492,6 +1587,9 @@ window.APP_CONFIG = {
 
   document.getElementById('liveBtn').addEventListener('click', function(){
     document.getElementById('liveOverlay').classList.add('open');
+    selfPace = localStorage.getItem('m9_self_pace') === '1';
+    renderPaceUI();
+    renderPaceNav();
     if(!liveCode){
       var saved = localStorage.getItem('m9_live_code');
       if(saved){
@@ -1526,6 +1624,63 @@ window.APP_CONFIG = {
       document.body.removeChild(ta);
     }
   });
+  // 顾问端：面板内的翻页控制
+  function screenLabel(name){
+    if(name === 'intro') return '开场';
+    if(name === 'finance') return '财务数据';
+    if(name === 'readiness') return '扩张就绪度';
+    if(name === 'contact') return '客户资料';
+    if(name === 'report') return '完整报告';
+    if(name === 'insight_finance') return '财务洞察 · 话术';
+    if(name.indexOf('insight_') === 0) return dimTitleByKey(name.slice(8)) + ' · 话术';
+    if(name.indexOf('q_') === 0) return dimTitleByKey(name.slice(2)) + ' 问卷';
+    return name;
+  }
+  function renderPaceNav(){
+    var nav = document.getElementById('paceNav');
+    nav.classList.toggle('hidden', selfPace);
+    var name = screens[current] || 'intro';
+    document.getElementById('pnScreen').textContent = screenLabel(name) + '（' + (current+1) + '/' + screens.length + '）';
+    document.getElementById('pnPrev').disabled = current <= 0;
+    var last = current >= screens.length - 1;
+    document.getElementById('pnNext').disabled = last;
+    document.getElementById('pnNext').textContent = last ? '已到最后一页' : '下一页 →';
+    var clientSees = clientScreenFor(name);
+    document.getElementById('pnHint').textContent = clientSees === 'wait'
+      ? '客户现在看到「顾问正在讲解」，话术只有你看得到。'
+      : (clientSees === 'done' ? '客户现在只看到总分，看不到报告。'
+      : '客户现在跟你在同一页：' + screenLabel(clientSees));
+  }
+  document.getElementById('pnPrev').addEventListener('click', function(){
+    goTo(current - 1); renderPaceNav(); renderLivePanel();
+  });
+  document.getElementById('pnNext').addEventListener('click', function(){
+    goTo(current + 1); renderPaceNav(); renderLivePanel();
+  });
+
+  var selfPace = false;
+  function renderPaceUI(){
+    var sw = document.getElementById('paceSwitch');
+    Array.prototype.forEach.call(sw.querySelectorAll('.pace-opt'), function(b){
+      b.classList.toggle('active', (b.dataset.pace === 'self') === selfPace);
+    });
+    document.getElementById('paceHint').textContent = selfPace
+      ? '客户可以自己按「下一步」，照他自己的速度填完。你这边照样即时看到他填的每一个答案。'
+      : '客户的画面跟着你走，他那边没有「下一步」按钮。你按一次，他才前进一页。';
+  }
+  document.getElementById('paceSwitch').addEventListener('click', function(e){
+    var btn = e.target.closest('.pace-opt');
+    if(!btn) return;
+    selfPace = btn.dataset.pace === 'self';
+    localStorage.setItem('m9_self_pace', selfPace ? '1' : '0');
+    renderPaceUI();
+    renderPaceNav();
+    if(db && liveCode){
+      lastLocal = Date.now();
+      ctlRef().set({selfPace: selfPace, screen: clientScreenFor(screens[current] || 'intro'), ts: Date.now()}, {merge:true}).catch(function(){});
+    }
+  });
+
   document.getElementById('previewBtn').addEventListener('click', function(){
     if(liveCode) window.open(clientUrl(liveCode), '_blank', 'noopener');
   });
@@ -1708,8 +1863,11 @@ window.APP_CONFIG = {
     return name;
   }
 
-  // 直接按名字显示某一页（不动 current 索引）
+  // 直接按名字显示某一页；同时把页码索引对齐，
+  // 这样顾问放手让客户自行翻页时，客户是从「正确的这一页」继续，而不是跳回旧位置
   function showScreenByName(name){
+    var idx = screens.indexOf(name);
+    if(idx >= 0) current = idx;
     document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
     Object.keys(quizBlocks).forEach(function(k){ quizBlocks[k].block.style.display = 'none'; });
     if(name.indexOf('q_') === 0){
@@ -1775,7 +1933,7 @@ window.APP_CONFIG = {
     if(CLIENT_MODE || !db || !liveCode) return;
     var sc = clientScreenFor(screens[current] || 'intro');
     lastLocal = Date.now();
-    ctlRef().set({screen: sc, ts: Date.now(), consultantName: myName}, {merge:true}).catch(function(){});
+    ctlRef().set({screen: sc, ts: Date.now(), consultantName: myName, selfPace: selfPace}, {merge:true}).catch(function(){});
   }
 
   // 两端共用：把作答资料推上去
